@@ -115,7 +115,7 @@
   <dialog id="checkoutDialog">
     <form method="dialog" id="checkoutForm" class="modal checkout-modal">
       <div class="modal-head"><div><p class="eyebrow">CHECKOUT</p><h3>Complete your order</h3></div>
-        <button value="cancel" class="icon-btn" id="closeCheckout">×</button></div>
+        <button value="cancel" class="icon-btn" id="closeCheckoutX">×</button></div>
       <div id="checkoutSummary" class="checkout-summary"></div>
       <div class="cart-total"><span>Total</span><strong id="checkoutTotal">Rp0</strong></div>
       <div class="two-col">
@@ -129,7 +129,7 @@
       <label>Catatan Pesanan (opsional)<textarea id="customerNote" rows="2" placeholder="Ukuran, warna, atau catatan lainnya"></textarea></label>
       <p class="checkout-note">Order akan dibuat dengan status <strong>Pending</strong>. Pembayaran Midtrans akan disambungkan setelah Business Review selesai.</p>
       <p id="checkoutError" class="form-error"></p>
-      <div class="form-actions"><button type="button" class="button ghost" id="closeCheckout">Cancel</button>
+      <div class="form-actions"><button type="button" class="button ghost" id="closeCheckoutCancel">Cancel</button>
         <button type="submit" class="button dark" id="placeOrderBtn">Place order</button></div>
     </form>
   </dialog>
@@ -168,6 +168,6 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=checkout-fix-2"></script>
 </body>
 </html>
