@@ -1,204 +1,263 @@
-const KEY="plea_ashes_v4_products";
-const defaultProducts=[
- {id:"p1",name:"Ash Core Tee",price:289000,stock:18,category:"T-Shirts",image:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85",description:"Heavyweight cotton tee with a quiet front mark."},
- {id:"p2",name:"Burnline Overshirt",price:749000,stock:9,category:"Outerwear",image:"https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=900&q=85",description:"Structured overshirt with a relaxed silhouette."},
- {id:"p3",name:"Aftermath Cap",price:259000,stock:24,category:"Accessories",image:"https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=900&q=85",description:"Six-panel cap finished with understated embroidery."},
- {id:"p4",name:"Coal Wide Trousers",price:689000,stock:7,category:"Bottoms",image:"https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85",description:"Wide-leg trousers with a clean, utilitarian line."},
- {id:"p5",name:"Smoke Zip Hoodie",price:799000,stock:11,category:"Sweats",image:"https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85",description:"Brushed fleece hoodie with oversized proportions."},
- {id:"p6",name:"Residue Tote",price:219000,stock:31,category:"Accessories",image:"https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=900&q=85",description:"Everyday canvas carryall with internal pocket."}
-];
-let products=loadProducts(), cart=JSON.parse(localStorage.getItem("plea_ashes_v4_cart")||"[]");
+/* PLEA ASHES v4 — Supabase edition
+   Replace SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY below with your project values.
+*/
+const SUPABASE_URL = "https://euiadxlpqnvrbyxrzelp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_LrIwp7KKrOy_ha_gDeHv8g_zGeTMCND";
 
-const $=s=>document.querySelector(s);
-const money=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
+const { createClient } = window.supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-function handleProductImageUpload(file, previewId, urlInputId) {
-  if (!file) return;
-  if (!file.type.startsWith("image/")) {
-    alert("File harus berupa gambar.");
-    return;
-  }
-  const maxMB = 3;
-  if (file.size > maxMB * 1024 * 1024) {
-    alert(`Ukuran foto maksimal ${maxMB} MB.`);
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    const result = reader.result;
-    const preview = document.getElementById(previewId);
-    const urlInput = document.getElementById(urlInputId);
-    if (urlInput) urlInput.value = result;
-    if (preview) {
-      preview.src = result;
-      preview.style.display = "block";
-    }
-  };
-  reader.readAsDataURL(file);
+const $ = (s) => document.querySelector(s);
+const money = (n) => new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0);
+
+let products = [];
+let cart = JSON.parse(localStorage.getItem("plea_ashes_cart") || "[]");
+let currentSession = null;
+let selectedImageFile = null;
+
+function toast(msg){
+  const el=$("#toast"); el.textContent=msg; el.classList.add("show");
+  clearTimeout(window.__toast); window.__toast=setTimeout(()=>el.classList.remove("show"),2600);
 }
+function escapeHtml(v=""){
+  return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+function placeholder(){
+  return "data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="700" height="800"><rect width="100%" height="100%" fill="#e5e1da"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="30" fill="#777">PLEA ASHES</text></svg>`);
+}
+function saveCart(){localStorage.setItem("plea_ashes_cart",JSON.stringify(cart));}
+function updateCartCount(){ $("#cartCount").textContent=cart.reduce((s,i)=>s+i.qty,0); }
 
-function loadProducts(){try{const x=JSON.parse(localStorage.getItem(KEY));return Array.isArray(x)?x:structuredClone(defaultProducts)}catch{return structuredClone(defaultProducts)}}
-function saveProducts(){localStorage.setItem(KEY,JSON.stringify(products));}
-function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(window._toast);window._toast=setTimeout(()=>t.classList.remove("show"),2200)}
-function imageFallback(img){img.onerror=()=>{img.src="data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="100%" height="100%" fill="#ddd"/><text x="50%" y="50%" text-anchor="middle" font-family="Arial" font-size="28" fill="#777">PLEA ASHES</text></svg>`)}}
-
+async function loadProducts(){
+  $("#loadingState").classList.remove("hidden");
+  const {data,error}=await db.from("products").select("*").order("created_at",{ascending:false});
+  $("#loadingState").classList.add("hidden");
+  if(error){ console.error(error); $("#productGrid").innerHTML=""; $("#emptyState").textContent="Produk belum bisa dimuat. Periksa RLS / koneksi Supabase."; $("#emptyState").classList.remove("hidden"); return; }
+  products=data||[];
+  renderCategories(); renderProducts(); renderAdmin();
+}
 function renderCategories(){
- const cats=[...new Set(products.map(p=>p.category))].sort();
- const select=$("#categoryFilter"); const current=select.value;
- select.innerHTML='<option value="all">All categories</option>'+cats.map(c=>`<option>${escapeHtml(c)}</option>`).join("");
- if(cats.includes(current)) select.value=current;
+  const select=$("#categoryFilter"); const current=select.value;
+  const cats=[...new Set(products.map(p=>p.category).filter(Boolean))].sort();
+  select.innerHTML='<option value="all">All categories</option>'+cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+  if(cats.includes(current)) select.value=current;
 }
 function filteredProducts(){
- const q=$("#search").value.trim().toLowerCase(), cat=$("#categoryFilter").value;
- return products.filter(p=>(!q||`${p.name} ${p.category} ${p.description}`.toLowerCase().includes(q))&&(cat==="all"||p.category===cat));
+  const q=$("#search").value.trim().toLowerCase(), cat=$("#categoryFilter").value;
+  return products.filter(p=>{
+    const text=`${p.name||""} ${p.category||""} ${p.description||""}`.toLowerCase();
+    return (!q||text.includes(q)) && (cat==="all"||p.category===cat);
+  });
 }
-function renderShop(){
- const grid=$("#productGrid"), list=filteredProducts();
- grid.innerHTML=list.map(p=>`<article class="product-card">
-  <div class="product-image"><img src="${escapeAttr(p.image)}" alt="${escapeAttr(p.name)}" onload="imageFallback(this)" onerror="imageFallback(this)"></div>
-  <div class="product-info"><div><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.category)}</p><p class="stock ${p.stock===0?"out":""}">${p.stock===0?"Out of stock":`${p.stock} in stock`}</p></div><span class="price">${money(p.price)}</span></div>
-  <button class="button dark full" ${p.stock===0?"disabled":""} onclick="addToCart('${p.id}')">${p.stock===0?"Sold out":"Add to cart"}</button>
- </article>`).join("");
- $("#emptyState").classList.toggle("hidden",list.length>0);
+function renderProducts(){
+  const list=filteredProducts(), grid=$("#productGrid"), empty=$("#emptyState");
+  grid.innerHTML=list.map(p=>`
+    <article class="product-card">
+      <div class="product-image"><img src="${escapeHtml(p.image_url||placeholder())}" alt="${escapeHtml(p.name)}" onerror="this.src='${placeholder()}'"></div>
+      <div class="product-info">
+        <div class="product-meta"><span>${escapeHtml(p.category||"")}</span><span>${Number(p.stock)>0?"In stock":"Sold out"}</span></div>
+        <h3>${escapeHtml(p.name)}</h3>
+        <p>${escapeHtml(p.description||"")}</p>
+        <strong>${money(p.price)}</strong>
+        <button class="button dark product-buy" data-add="${escapeHtml(p.id)}" ${Number(p.stock)<=0?"disabled":""}>${Number(p.stock)>0?"Add to cart":"Sold out"}</button>
+      </div>
+    </article>`).join("");
+  empty.classList.toggle("hidden",list.length>0);
 }
 function renderAdmin(){
- const q=$("#adminSearch").value.trim().toLowerCase();
- const list=products.filter(p=>`${p.name} ${p.category}`.toLowerCase().includes(q));
- $("#adminTable").innerHTML=list.map(p=>`<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${escapeHtml(p.category)}</td><td>${money(p.price)}</td><td>${p.stock}</td><td><div class="actions"><button class="mini" onclick="editProduct('${p.id}')">Edit</button><button class="mini delete" onclick="deleteProduct('${p.id}')">Delete</button></div></td></tr>`).join("");
- $("#statProducts").textContent=products.length;
- $("#statStock").textContent=products.reduce((a,p)=>a+Number(p.stock||0),0);
- $("#statCategories").textContent=new Set(products.map(p=>p.category)).size;
+  if(!currentSession) return;
+  const q=$("#adminSearch").value.trim().toLowerCase();
+  const list=products.filter(p=>`${p.name||""} ${p.category||""}`.toLowerCase().includes(q));
+  $("#statProducts").textContent=products.length;
+  $("#statStock").textContent=products.reduce((s,p)=>s+Number(p.stock||0),0);
+  $("#statCategories").textContent=new Set(products.map(p=>p.category).filter(Boolean)).size;
+  $("#adminTable").innerHTML=list.map(p=>`
+    <tr>
+      <td><div class="admin-product"><img src="${escapeHtml(p.image_url||placeholder())}" alt=""><div><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.description||"").slice(0,60)}</small></div></div></td>
+      <td>${escapeHtml(p.category||"")}</td><td>${money(p.price)}</td><td>${Number(p.stock||0)}</td>
+      <td><div class="actions"><button class="action-btn" data-edit="${escapeHtml(p.id)}">Edit</button><button class="action-btn delete" data-delete="${escapeHtml(p.id)}">Delete</button></div></td>
+    </tr>`).join("");
 }
-function refresh(){renderCategories();renderShop();renderAdmin();renderCart();}
-
+function openLogin(){
+  $("#loginError").textContent="";
+  $("#loginPassword").value="";
+  $("#loginDialog").showModal();
+}
+function openAdmin(){
+  if(!currentSession){openLogin();return;}
+  $("#adminEmail").textContent=currentSession.user.email||"";
+  renderAdmin(); $("#adminDialog").showModal();
+}
+async function login(e){
+  e.preventDefault(); $("#loginError").textContent="Logging in…"; $("#loginSubmit").disabled=true;
+  const {data,error}=await db.auth.signInWithPassword({email:$("#loginEmail").value.trim(),password:$("#loginPassword").value});
+  $("#loginSubmit").disabled=false;
+  if(error){$("#loginError").textContent=error.message;return;}
+  currentSession=data.session;
+  $("#loginDialog").close(); $("#adminEmail").textContent=currentSession.user.email||"";
+  $("#adminDialog").showModal(); toast("Login berhasil.");
+}
+async function signOut(){
+  await db.auth.signOut(); currentSession=null; $("#adminDialog").close(); toast("Sudah logout.");
+}
+function resetForm(){
+  $("#productForm").reset(); $("#productId").value=""; $("#oldImageUrl").value="";
+  $("#formTitle").textContent="Add product"; $("#productImagePreview").src=placeholder();
+  selectedImageFile=null; $("#productError").textContent="";
+}
 function openProductForm(p=null){
-  $("#productForm").reset();
-  $("#productId").value = p?.id || "";
-  $("#formTitle").textContent = p ? "Edit product" : "Add product";
-
-  const preview = $("#productImagePreview");
-  if (p) {
-    $("#name").value = p.name || "";
-    $("#price").value = p.price ?? 0;
-    $("#stock").value = p.stock ?? 0;
-    $("#category").value = p.category || "";
-    $("#image").value = (p.image && !p.image.startsWith("data:image/")) ? p.image : "";
-    $("#description").value = p.description || "";
-    if (p.image) {
-      preview.src = p.image;
-      preview.style.display = "block";
-    } else {
-      preview.removeAttribute("src");
-      preview.style.display = "none";
-    }
-  } else {
-    preview.removeAttribute("src");
-    preview.style.display = "none";
+  resetForm();
+  if(p){
+    $("#formTitle").textContent="Edit product"; $("#productId").value=p.id; $("#oldImageUrl").value=p.image_url||"";
+    $("#name").value=p.name||""; $("#price").value=p.price??0; $("#stock").value=p.stock??0;
+    $("#category").value=p.category||""; $("#image").value=p.image_url||""; $("#description").value=p.description||"";
+    $("#productImagePreview").src=p.image_url||placeholder();
   }
-
   $("#productDialog").showModal();
 }
-
-$("#productImageFile").addEventListener("change", (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    alert("File harus berupa gambar.");
-    e.target.value = "";
-    return;
-  }
-
-  if (file.size > 3 * 1024 * 1024) {
-    alert("Ukuran foto maksimal 3 MB.");
-    e.target.value = "";
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    $("#image").value = reader.result;
-    $("#productImagePreview").src = reader.result;
-    $("#productImagePreview").style.display = "block";
-  };
-  reader.onerror = () => alert("Foto gagal dibaca. Silakan coba foto lain.");
-  reader.readAsDataURL(file);
-});
-
-$("#image").addEventListener("input", () => {
-  const value = $("#image").value.trim();
-  const preview = $("#productImagePreview");
-  if (value) {
-    preview.src = value;
-    preview.style.display = "block";
-  }
-});
-
-$("#productForm").addEventListener("submit",e=>{
-  e.preventDefault();
-
-  const name = $("#name").value.trim();
-  const category = $("#category").value.trim();
-  const price = Number($("#price").value);
-  const stock = Number($("#stock").value);
-  const image = $("#image").value.trim();
-  const description = $("#description").value.trim();
-
-  if (!name || !category) {
-    alert("Nama produk dan kategori wajib diisi.");
-    return;
-  }
-  if (!Number.isFinite(price) || price < 0) {
-    alert("Harga tidak valid.");
-    return;
-  }
-  if (!Number.isFinite(stock) || stock < 0) {
-    alert("Stok tidak valid.");
-    return;
-  }
-
-  const id = $("#productId").value || "p" + Date.now();
-  const data = {id, name, price, stock, category, image, description};
-  const i = products.findIndex(p => p.id === id);
-
-  try {
-    if (i >= 0) products[i] = data;
-    else products.unshift(data);
-    saveProducts();
-  } catch (err) {
-    alert("Produk gagal disimpan. Foto mungkin terlalu besar untuk penyimpanan browser.");
-    return;
-  }
-
-  $("#productDialog").close();
-  refresh();
-  toast(i >= 0 ? "Produk berhasil diperbarui" : "Produk berhasil ditambahkan");
-});
-
-function editProduct(id){openProductForm(products.find(p=>p.id===id))}
-function deleteProduct(id){const p=products.find(x=>x.id===id);if(!p)return;if(confirm(`Delete "${p.name}"?`)){products=products.filter(x=>x.id!==id);saveProducts();cart=cart.filter(x=>x.id!==id);saveCart();refresh();toast("Product deleted")}}
-$("#resetData").onclick=()=>{if(confirm("Reset all products to the demo catalog?")){products=structuredClone(defaultProducts);saveProducts();refresh();toast("Demo data restored")}};
-$("#addProduct").onclick=()=>openProductForm();
-$("#adminSearch").oninput=renderAdmin;
-$("#openAdmin").onclick=()=>{$("#adminDialog").showModal();renderAdmin()};
-$("#closeAdmin").onclick=()=>$("#adminDialog").close();
-
-function addToCart(id){const p=products.find(x=>x.id===id);if(!p||p.stock<1)return;const row=cart.find(x=>x.id===id);if(row){if(row.qty<p.stock)row.qty++}else cart.push({id,qty:1});saveCart();renderCart();toast("Added to cart")}
-function saveCart(){localStorage.setItem("plea_ashes_v4_cart",JSON.stringify(cart))}
-function renderCart(){
- $("#cartCount").textContent=cart.reduce((a,x)=>a+x.qty,0);
- $("#cartItems").innerHTML=cart.length?cart.map(row=>{const p=products.find(x=>x.id===row.id);return p?`<div class="cart-row"><img src="${escapeAttr(p.image)}" alt=""><div><h4>${escapeHtml(p.name)}</h4><p>${row.qty} × ${money(p.price)}</p></div><button onclick="removeCart('${p.id}')">×</button></div>`:""}).join(""):`<p style="color:#777">Your cart is empty.</p>`;
- $("#cartTotal").textContent=money(cart.reduce((a,row)=>{const p=products.find(x=>x.id===row.id);return a+(p?p.price*row.qty:0)},0));
+async function uploadImage(file){
+  if(!file) return null;
+  if(!file.type.startsWith("image/")) throw new Error("File harus berupa gambar.");
+  if(file.size>5*1024*1024) throw new Error("Ukuran foto maksimal 5 MB.");
+  const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+  const path=`products/${crypto.randomUUID()}.${ext}`;
+  const {error}=await db.storage.from("product-images").upload(path,file,{cacheControl:"3600",upsert:false});
+  if(error) throw error;
+  const {data}=db.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
 }
-function removeCart(id){cart=cart.filter(x=>x.id!==id);saveCart();renderCart()}
-$("#cartBtn").onclick=()=>$("#cartDialog").showModal();
-$("#closeCart").onclick=()=>$("#cartDialog").close();
-$("#checkoutBtn").onclick=()=>{if(!cart.length)return toast("Your cart is empty");toast("Demo checkout — connect your payment flow here.")};
+async function saveProduct(e){
+  e.preventDefault();
+  if(!currentSession){toast("Silakan login.");return;}
+  const button=$("#saveProduct"); button.disabled=true; button.textContent="Saving…"; $("#productError").textContent="";
+  try{
+    let imageUrl=$("#image").value.trim();
+    if(selectedImageFile) imageUrl=await uploadImage(selectedImageFile);
+    const payload={
+      name:$("#name").value.trim(), price:Number($("#price").value||0), stock:Number($("#stock").value||0),
+      category:$("#category").value.trim(), image_url:imageUrl||null, description:$("#description").value.trim()
+    };
+    const id=$("#productId").value;
+    const result=id ? await db.from("products").update(payload).eq("id",id).select().single()
+                    : await db.from("products").insert(payload).select().single();
+    if(result.error) throw result.error;
+    $("#productDialog").close(); await loadProducts(); renderAdmin();
+    toast(id?"Produk diperbarui.":"Produk ditambahkan.");
+  }catch(err){console.error(err);$("#productError").textContent=err.message||"Gagal menyimpan produk.";}
+  finally{button.disabled=false;button.textContent="Save product";}
+}
+async function deleteProduct(id){
+  const p=products.find(x=>String(x.id)===String(id)); if(!p)return;
+  if(!confirm(`Hapus "${p.name}"?`))return;
+  const {error}=await db.from("products").delete().eq("id",id);
+  if(error){toast("Gagal menghapus: "+error.message);return;}
+  await loadProducts(); toast("Produk dihapus.");
+}
+function addToCart(id){
+  const p=products.find(x=>String(x.id)===String(id)); if(!p||Number(p.stock)<=0)return;
+  const item=cart.find(x=>String(x.id)===String(id));
+  if(item){if(item.qty>=Number(p.stock)){toast("Stok tidak cukup.");return}item.qty++}
+  else cart.push({id:p.id,qty:1});
+  saveCart();updateCartCount();toast("Ditambahkan ke cart.");
+}
+function renderCart(){
+  const rows=cart.map(i=>{const p=products.find(x=>String(x.id)===String(i.id));return p?{...p,qty:i.qty}:null}).filter(Boolean);
+  if(rows.length===0){$("#cartItems").innerHTML='<div class="empty">Cart masih kosong.</div>';$("#cartTotal").textContent=money(0);return;}
+  $("#cartItems").innerHTML=rows.map(p=>`<div class="cart-row"><img src="${escapeHtml(p.image_url||placeholder())}" alt=""><div class="cart-row-info"><strong>${escapeHtml(p.name)}</strong><small>${p.qty} × ${money(p.price)}</small></div><button data-remove-cart="${escapeHtml(p.id)}">Remove</button></div>`).join("");
+  $("#cartTotal").textContent=money(rows.reduce((s,p)=>s+p.price*p.qty,0));
+}
+function removeCart(id){cart=cart.filter(i=>String(i.id)!==String(id));saveCart();updateCartCount();renderCart();}
+function getCartRows(){
+  return cart.map(i=>{const p=products.find(x=>String(x.id)===String(i.id));return p?{...p,qty:Number(i.qty)||1}:null}).filter(Boolean);
+}
+function openCheckout(){
+  const rows=getCartRows();
+  if(!rows.length){toast("Cart masih kosong.");return;}
+  const total=rows.reduce((s,p)=>s+Number(p.price||0)*p.qty,0);
+  $("#checkoutSummary").innerHTML=rows.map(p=>`<div class="checkout-line"><span>${escapeHtml(p.name)} × ${p.qty}</span><strong>${money(Number(p.price||0)*p.qty)}</strong></div>`).join("");
+  $("#checkoutTotal").textContent=money(total);
+  $("#checkoutError").textContent="";
+  $("#checkoutDialog").showModal();
+}
+function makeOrderNumber(){
+  const now=new Date();
+  const stamp=now.toISOString().replace(/[-:TZ.]/g,"").slice(0,14);
+  const rand=Math.floor(1000+Math.random()*9000);
+  return `PA-${stamp}-${rand}`;
+}
+async function submitCheckout(e){
+  e.preventDefault();
+  const button=$("#placeOrderBtn"); button.disabled=true; button.textContent="Creating order…"; $("#checkoutError").textContent="";
+  try{
+    const rows=getCartRows();
+    if(!rows.length) throw new Error("Cart masih kosong.");
+    for(const p of rows){
+      if(Number(p.stock)<=0) throw new Error(`${p.name} sudah habis.`);
+      if(p.qty>Number(p.stock)) throw new Error(`Stok ${p.name} tidak cukup.`);
+    }
+    const customer={
+      name:$("#customerName").value.trim(),
+      email:$("#customerEmail").value.trim(),
+      phone:$("#customerPhone").value.trim(),
+      address:$("#customerAddress").value.trim(),
+      note:$("#customerNote").value.trim()
+    };
+    const total=rows.reduce((s,p)=>s+Number(p.price||0)*p.qty,0);
+    const orderNumber=makeOrderNumber();
+    const items=rows.map(p=>({product_id:p.id,name:p.name,price:Number(p.price||0),qty:p.qty,image_url:p.image_url||null}));
+    const {error}=await db.from("orders").insert({
+      order_number:orderNumber, customer_name:customer.name, customer_email:customer.email,
+      customer_phone:customer.phone, shipping_address:customer.address, note:customer.note||null,
+      items, total_amount:total, status:"pending"
+    });
+    if(error) throw error;
+    cart=[]; saveCart(); updateCartCount(); renderCart();
+    $("#checkoutDialog").close(); $("#cartDialog").close();
+    $("#successOrderNumber").textContent=orderNumber;
+    $("#successDialog").showModal();
+  }catch(err){console.error(err);$("#checkoutError").textContent=err.message||"Gagal membuat order.";}
+  finally{button.disabled=false;button.textContent="Place order";}
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(products,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="plea-ashes-products.json";a.click();URL.revokeObjectURL(a.href);
+}
+async function importData(file){
+  try{
+    const data=JSON.parse(await file.text()); if(!Array.isArray(data))throw new Error("JSON harus berupa array produk.");
+    for(const p of data){
+      const payload={name:p.name||"Untitled",price:Number(p.price||0),stock:Number(p.stock||0),category:p.category||"General",image_url:p.image_url||null,description:p.description||""};
+      const {error}=await db.from("products").insert(payload);if(error)throw error;
+    }
+    await loadProducts();toast("Import selesai.");
+  }catch(e){toast("Import gagal: "+e.message);}
+}
 
-$("#search").oninput=renderShop; $("#categoryFilter").onchange=renderShop;
-$("#exportData").onclick=()=>{const blob=new Blob([JSON.stringify(products,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="plea-ashes-products.json";a.click();URL.revokeObjectURL(a.href)};
-$("#importData").onchange=e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!Array.isArray(data))throw 0;products=data.map((p,i)=>({...p,id:p.id||"imported-"+i}));saveProducts();refresh();toast("Products imported")}catch{toast("Invalid JSON file")}};reader.readAsText(file);e.target.value=""};
-
-function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function escapeAttr(s){return escapeHtml(s)}
-refresh();
+document.addEventListener("click",e=>{
+  const add=e.target.closest("[data-add]"); if(add)addToCart(add.dataset.add);
+  const edit=e.target.closest("[data-edit]"); if(edit){const p=products.find(x=>String(x.id)===String(edit.dataset.edit));if(p)openProductForm(p);}
+  const del=e.target.closest("[data-delete]"); if(del)deleteProduct(del.dataset.delete);
+  const rem=e.target.closest("[data-remove-cart]"); if(rem)removeCart(rem.dataset.removeCart);
+});
+$("#openAdmin").addEventListener("click",openAdmin);
+$("#loginForm").addEventListener("submit",login);
+$("#signOut").addEventListener("click",signOut);
+$("#closeAdmin").addEventListener("click",()=>$("#adminDialog").close());
+$("#addProduct").addEventListener("click",()=>openProductForm());
+$("#productForm").addEventListener("submit",saveProduct);
+$("#productImageFile").addEventListener("change",e=>{selectedImageFile=e.target.files[0]||null;if(selectedImageFile){$("#productImagePreview").src=URL.createObjectURL(selectedImageFile);$("#image").value="";}});
+$("#image").addEventListener("input",e=>{if(e.target.value)$("#productImagePreview").src=e.target.value;});
+$("#search").addEventListener("input",renderProducts);
+$("#categoryFilter").addEventListener("change",renderProducts);
+$("#adminSearch").addEventListener("input",renderAdmin);
+$("#cartBtn").addEventListener("click",()=>{renderCart();$("#cartDialog").showModal();});
+$("#closeCart").addEventListener("click",()=>$("#cartDialog").close());
+$("#checkoutBtn").addEventListener("click",openCheckout);
+$("#checkoutForm").addEventListener("submit",submitCheckout);
+$("#closeCheckout").addEventListener("click",()=>$("#checkoutDialog").close());
+$("#closeSuccess").addEventListener("click",()=>$("#successDialog").close());
+$("#exportData").addEventListener("click",exportData);
+$("#importData").addEventListener("change",e=>{if(e.target.files[0])importData(e.target.files[0]);e.target.value="";});
+db.auth.getSession().then(({data})=>{currentSession=data.session;loadProducts();});
+db.auth.onAuthStateChange((_event,session)=>{currentSession=session;});
+updateCartCount();
