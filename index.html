@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>PLEA ASHES v4 — Store</title>
+  <title>PLEA ASHES v4 — Store & Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -13,9 +13,14 @@
   <div id="toast" class="toast"></div>
 
   <header class="site-header">
-    <a class="brand" href="#home"><span class="brand-mark">PA</span><span>PLEA ASHES</span></a>
+    <a class="brand" href="#home" aria-label="PLEA ASHES">
+      <span class="brand-mark">PA</span>
+      <span>PLEA ASHES</span>
+    </a>
     <nav>
-      <a href="#home">Home</a><a href="#shop">Shop</a><a href="#about">About</a>
+      <a href="#home">Home</a>
+      <a href="#shop">Shop</a>
+      <a href="#about">About</a>
       <button class="admin-link" id="openAdmin">Admin</button>
     </nav>
     <button class="cart-btn" id="cartBtn">Cart <span id="cartCount">0</span></button>
@@ -38,10 +43,11 @@
     <section id="shop" class="shop section">
       <div class="section-head">
         <div><p class="eyebrow">COLLECTION</p><h2>Latest pieces</h2></div>
-        <div class="shop-tools"><input id="search" type="search" placeholder="Search products...">
-          <select id="categoryFilter"><option value="all">All categories</option></select></div>
+        <div class="shop-tools">
+          <input id="search" type="search" placeholder="Search products...">
+          <select id="categoryFilter"><option value="all">All categories</option></select>
+        </div>
       </div>
-      <div id="loadingState" class="empty">Loading products…</div>
       <div id="productGrid" class="product-grid"></div>
       <div id="emptyState" class="empty hidden">No products match your search.</div>
     </section>
@@ -49,125 +55,66 @@
     <section id="about" class="manifesto section">
       <p class="eyebrow">THE IDEA</p>
       <h2>Nothing polished.<br>Nothing accidental.</h2>
-      <p>PLEA ASHES is an independent label built around contrast: raw surfaces, considered forms, and pieces designed to live beyond a single season.</p>
+      <p>PLEA ASHES is a fictional independent label built around contrast: raw surfaces, considered forms, and pieces designed to live beyond a single season.</p>
     </section>
   </main>
 
-  <footer><span>© 2026 PLEA ASHES</span><span>V4 / SUPABASE PRODUCT SYSTEM</span></footer>
+  <footer><span>© 2026 PLEA ASHES</span><span>V4 / PRODUCT SYSTEM</span></footer>
 
-  <!-- Login -->
-  <dialog id="loginDialog">
-    <form method="dialog" id="loginForm" class="modal small-modal">
-      <div class="modal-head"><div><p class="eyebrow">PLEA ASHES / ADMIN</p><h3>Admin Login</h3></div>
-        <button value="cancel" class="icon-btn">×</button></div>
-      <label>Email<input id="loginEmail" type="email" autocomplete="email" required></label>
-      <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required></label>
-      <p id="loginError" class="form-error"></p>
-      <div class="form-actions"><button value="cancel" class="button ghost">Cancel</button>
-        <button id="loginSubmit" value="default" class="button dark">Login</button></div>
-    </form>
-  </dialog>
-
-  <!-- Product -->
   <dialog id="productDialog">
     <form method="dialog" id="productForm" class="modal">
-      <div class="modal-head"><div><p class="eyebrow">PRODUCT</p><h3 id="formTitle">Add product</h3></div>
-        <button value="cancel" class="icon-btn">×</button></div>
+      <div class="modal-head"><div><p class="eyebrow">PRODUCT</p><h3 id="formTitle">Add product</h3></div><button value="cancel" class="icon-btn">×</button></div>
       <input type="hidden" id="productId">
-      <input type="hidden" id="oldImageUrl">
-      <label>Nama Produk<input id="name" type="text" required></label>
+      <label>Name<input id="name" required></label>
       <div class="two-col">
-        <label>Harga (IDR)<input id="price" type="number" min="0" step="1000" required></label>
-        <label>Stok<input id="stock" type="number" min="0" required></label>
+        <label>Price (IDR)<input id="price" type="number" min="0" required></label>
+        <label>Stock<input id="stock" type="number" min="0" required></label>
       </div>
-      <label>Kategori<input id="category" type="text" required placeholder="Outerwear"></label>
-      <div class="image-editor">
-        <label>Foto Produk</label>
-        <div class="image-upload-box">
-          <img id="productImagePreview" class="product-image-preview" alt="Preview foto produk">
-          <div class="image-upload-controls">
-            <input id="productImageFile" type="file" accept="image/*">
-            <small>Upload langsung ke Supabase Storage. Maksimal 5 MB.</small>
-          </div>
-        </div>
-        <label class="url-fallback">Atau URL Foto
-          <input id="image" type="url" placeholder="https://..."></label>
-      </div>
-      <label>Deskripsi<textarea id="description" rows="3"></textarea></label>
-      <p id="productError" class="form-error"></p>
-      <div class="form-actions"><button value="cancel" class="button ghost">Cancel</button>
-        <button id="saveProduct" value="default" class="button dark">Save product</button></div>
+      <label>Category<input id="category" required placeholder="Outerwear"></label>
+      <label>Image URL<input id="image" placeholder="https://..."></label>
+      <label>Description<textarea id="description" rows="3"></textarea></label>
+      <div class="form-actions"><button value="cancel" class="button ghost">Cancel</button><button id="saveProduct" value="default" class="button dark">Save product</button></div>
     </form>
   </dialog>
 
-  <!-- Cart -->
   <dialog id="cartDialog">
     <div class="modal cart-modal">
-      <div class="modal-head"><div><p class="eyebrow">YOUR CART</p><h3>Selected pieces</h3></div>
-        <button class="icon-btn" id="closeCart">×</button></div>
+      <div class="modal-head"><div><p class="eyebrow">YOUR CART</p><h3>Selected pieces</h3></div><button class="icon-btn" id="closeCart">×</button></div>
       <div id="cartItems"></div>
       <div class="cart-total"><span>Total</span><strong id="cartTotal">Rp0</strong></div>
       <button class="button dark full" id="checkoutBtn">Checkout</button>
     </div>
   </dialog>
 
-  <!-- Checkout -->
-  <dialog id="checkoutDialog">
-    <form method="dialog" id="checkoutForm" class="modal checkout-modal">
-      <div class="modal-head"><div><p class="eyebrow">CHECKOUT</p><h3>Complete your order</h3></div>
-        <button value="cancel" class="icon-btn" id="closeCheckoutX">×</button></div>
-      <div id="checkoutSummary" class="checkout-summary"></div>
-      <div class="cart-total"><span>Total</span><strong id="checkoutTotal">Rp0</strong></div>
-      <div class="two-col">
-        <label>Nama Lengkap<input id="customerName" type="text" autocomplete="name" required></label>
-        <label>Email<input id="customerEmail" type="email" autocomplete="email" required></label>
-      </div>
-      <div class="two-col">
-        <label>WhatsApp<input id="customerPhone" type="tel" autocomplete="tel" required placeholder="08xxxxxxxxxx"></label>
-        <label>Alamat<textarea id="customerAddress" rows="2" autocomplete="street-address" required></textarea></label>
-      </div>
-      <label>Catatan Pesanan (opsional)<textarea id="customerNote" rows="2" placeholder="Ukuran, warna, atau catatan lainnya"></textarea></label>
-      <p class="checkout-note">Order akan dibuat dengan status <strong>Pending</strong>. Pembayaran Midtrans akan disambungkan setelah Business Review selesai.</p>
-      <p id="checkoutError" class="form-error"></p>
-      <div class="form-actions"><button type="button" class="button ghost" id="closeCheckoutCancel">Cancel</button>
-        <button type="submit" class="button dark" id="placeOrderBtn">Place order</button></div>
-    </form>
-  </dialog>
-
-  <!-- Order created -->
-  <dialog id="successDialog">
-    <div class="modal small-modal success-modal">
-      <div class="modal-head"><div><p class="eyebrow">ORDER CREATED</p><h3>Pesanan diterima</h3></div>
-        <button class="icon-btn" id="closeSuccess">×</button></div>
-      <p>Order kamu sudah tercatat. Simpan nomor order berikut:</p>
-      <div class="order-number" id="successOrderNumber"></div>
-      <p class="checkout-note">Status saat ini: <strong>Pending payment</strong>. Setelah Midtrans aktif, tombol pembayaran akan muncul di tahap ini.</p>
-      <div class="form-actions"><button class="button dark" id="successOk">OK</button></div>
-    </div>
-  </dialog>
-
-  <!-- Admin -->
   <dialog id="adminDialog">
     <div class="modal admin-modal">
       <div class="modal-head">
-        <div><p class="eyebrow">PLEA ASHES / ADMIN</p><h3>Product Management</h3><small id="adminEmail"></small></div>
-        <div class="head-actions"><button class="button ghost mini" id="signOut">Sign out</button><button class="icon-btn" id="closeAdmin">×</button></div>
+        <div><p class="eyebrow">PLEA ASHES / ADMIN</p><h3>Product Management</h3></div>
+        <button class="icon-btn" id="closeAdmin">×</button>
       </div>
-      <div class="admin-toolbar"><input id="adminSearch" type="search" placeholder="Search products...">
-        <button class="button dark" id="addProduct">+ Add product</button></div>
+      <div class="admin-toolbar">
+        <input id="adminSearch" type="search" placeholder="Search products...">
+        <button class="button dark" id="addProduct">+ Add product</button>
+      </div>
       <div class="stats">
         <div><small>PRODUCTS</small><strong id="statProducts">0</strong></div>
         <div><small>UNITS IN STOCK</small><strong id="statStock">0</strong></div>
-        <div><small>CATEGORIES</small><strong id="statCategories">0</strong></div>
+        <div><small>CATAGORIES</small><strong id="statCategories">0</strong></div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
-        <tbody id="adminTable"></tbody></table></div>
-      <div class="admin-footer"><button class="button ghost" id="exportData">Export JSON</button>
-        <label class="button ghost file-label">Import JSON<input id="importData" type="file" accept=".json"></label></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+          <tbody id="adminTable"></tbody>
+        </table>
+      </div>
+      <div class="admin-footer">
+        <button class="button ghost" id="exportData">Export JSON</button>
+        <label class="button ghost file-label">Import JSON<input id="importData" type="file" accept=".json"></label>
+        <button class="button danger" id="resetData">Reset demo data</button>
+      </div>
     </div>
   </dialog>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=checkout-fix-2"></script>
+  <script src="app.js"></script>
 </body>
 </html>
