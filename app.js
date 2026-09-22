@@ -1,8 +1,8 @@
 /* PLEA ASHES v4 — Supabase edition
    Replace SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY below with your project values.
 */
-const SUPABASE_URL = "https://euiadxlpqnvrbyxrzelp.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_LrIwp7KKrOy_ha_gDeHv8g_zGeTMCND";
+const SUPABASE_URL = (window.PLEA_ASHES_SUPABASE?.url || "https://euiadxlpqnvrbyxrzelp.supabase.co");
+const SUPABASE_PUBLISHABLE_KEY = (window.PLEA_ASHES_SUPABASE?.publishableKey || "sb_publishable_LrIwp7KKrOy_ha_gDeHv8g_zGeTMCND");
 
 const { createClient } = window.supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -32,7 +32,7 @@ async function loadProducts(){
   $("#loadingState").classList.remove("hidden");
   const {data,error}=await db.from("products").select("*").order("created_at",{ascending:false});
   $("#loadingState").classList.add("hidden");
-  if(error){ console.error(error); $("#productGrid").innerHTML=""; $("#emptyState").textContent="Produk belum bisa dimuat. Periksa RLS / koneksi Supabase."; $("#emptyState").classList.remove("hidden"); return; }
+  if(error){ console.error("Supabase products error:", error); $("#productGrid").innerHTML=""; $("#emptyState").textContent=`Produk belum bisa dimuat: ${error.message || "Periksa koneksi Supabase."}`; $("#emptyState").classList.remove("hidden"); return; }
   products=data||[];
   renderCategories(); renderProducts(); renderAdmin();
 }
@@ -254,7 +254,8 @@ $("#cartBtn").addEventListener("click",()=>{renderCart();$("#cartDialog").showMo
 $("#closeCart").addEventListener("click",()=>$("#cartDialog").close());
 $("#checkoutBtn").addEventListener("click",openCheckout);
 $("#checkoutForm").addEventListener("submit",submitCheckout);
-$("#closeCheckout").addEventListener("click",()=>$("#checkoutDialog").close());
+$("#closeCheckoutX").addEventListener("click",()=>$("#checkoutDialog").close());
+$("#closeCheckoutCancel").addEventListener("click",()=>$("#checkoutDialog").close());
 $("#closeSuccess").addEventListener("click",()=>$("#successDialog").close());
 $("#exportData").addEventListener("click",exportData);
 $("#importData").addEventListener("change",e=>{if(e.target.files[0])importData(e.target.files[0]);e.target.value="";});
