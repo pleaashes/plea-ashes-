@@ -111,41 +111,6 @@
     </div>
   </dialog>
 
-  <!-- Checkout -->
-  <dialog id="checkoutDialog">
-    <form method="dialog" id="checkoutForm" class="modal checkout-modal">
-      <div class="modal-head"><div><p class="eyebrow">CHECKOUT</p><h3>Complete your order</h3></div>
-        <button value="cancel" class="icon-btn" id="closeCheckoutX">×</button></div>
-      <div id="checkoutSummary" class="checkout-summary"></div>
-      <div class="cart-total"><span>Total</span><strong id="checkoutTotal">Rp0</strong></div>
-      <div class="two-col">
-        <label>Nama Lengkap<input id="customerName" type="text" autocomplete="name" required></label>
-        <label>Email<input id="customerEmail" type="email" autocomplete="email" required></label>
-      </div>
-      <div class="two-col">
-        <label>WhatsApp<input id="customerPhone" type="tel" autocomplete="tel" required placeholder="08xxxxxxxxxx"></label>
-        <label>Alamat<textarea id="customerAddress" rows="2" autocomplete="street-address" required></textarea></label>
-      </div>
-      <label>Catatan Pesanan (opsional)<textarea id="customerNote" rows="2" placeholder="Ukuran, warna, atau catatan lainnya"></textarea></label>
-      <p class="checkout-note">Order akan dibuat dengan status <strong>Pending</strong>. Pembayaran Midtrans akan disambungkan setelah Business Review selesai.</p>
-      <p id="checkoutError" class="form-error"></p>
-      <div class="form-actions"><button type="button" class="button ghost" id="closeCheckoutCancel">Cancel</button>
-        <button type="submit" class="button dark" id="placeOrderBtn">Place order</button></div>
-    </form>
-  </dialog>
-
-  <!-- Order created -->
-  <dialog id="successDialog">
-    <div class="modal small-modal success-modal">
-      <div class="modal-head"><div><p class="eyebrow">ORDER CREATED</p><h3>Pesanan diterima</h3></div>
-        <button class="icon-btn" id="closeSuccess">×</button></div>
-      <p>Order kamu sudah tercatat. Simpan nomor order berikut:</p>
-      <div class="order-number" id="successOrderNumber"></div>
-      <p class="checkout-note">Status saat ini: <strong>Pending payment</strong>. Setelah Midtrans aktif, tombol pembayaran akan muncul di tahap ini.</p>
-      <div class="form-actions"><button class="button dark" id="successOk">OK</button></div>
-    </div>
-  </dialog>
-
   <!-- Admin -->
   <dialog id="adminDialog">
     <div class="modal admin-modal">
@@ -168,7 +133,6 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=fix2"></script>
-  <script src="app.js?v=fix3"></script>
+  <script src="app.js"></script>
 </body>
 </html>
