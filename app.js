@@ -4,12 +4,8 @@
 const SUPABASE_URL = (window.PLEA_ASHES_SUPABASE?.url || "https://euiadxlpqnvrbyxrzelp.supabase.co");
 const SUPABASE_PUBLISHABLE_KEY = (window.PLEA_ASHES_SUPABASE?.publishableKey || "sb_publishable_LrIwp7KKrOy_ha_gDeHv8g_zGeTMCND");
 
-if (!window.supabase || typeof window.supabase.createClient !== "function") {
-  throw new Error("Supabase library gagal dimuat.");
-}
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-window.PLEA_ASHES_DB = supabaseClient;
-const db = supabaseClient;
+const { createClient } = window.supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const $ = (s) => document.querySelector(s);
 const money = (n) => new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0);
@@ -263,17 +259,6 @@ $("#closeCheckoutCancel").addEventListener("click",()=>$("#checkoutDialog").clos
 $("#closeSuccess").addEventListener("click",()=>$("#successDialog").close());
 $("#exportData").addEventListener("click",exportData);
 $("#importData").addEventListener("change",e=>{if(e.target.files[0])importData(e.target.files[0]);e.target.value="";});
-async function boot(){
-  updateCartCount();
-  try {
-    const {data,error}=await db.auth.getSession();
-    if(error) console.warn("Supabase auth session:", error.message);
-    currentSession=data?.session || null;
-  } catch(err) {
-    console.warn("Supabase auth init:", err);
-  }
-  await loadProducts();
-}
-db.auth.onAuthStateChange((_event,session)=>{currentSession=session; renderAdmin();});
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-else boot();
+db.auth.getSession().then(({data})=>{currentSession=data.session;loadProducts();});
+db.auth.onAuthStateChange((_event,session)=>{currentSession=session;});
+updateCartCount();
